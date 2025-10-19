@@ -114,14 +114,32 @@ jobs:
             sleep 1
           done
 
-      - name: ZAP Baseline Scan (fail only on FAIL = high/critical)
+      - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.13.0
         with:
           target: 'http://localhost:3000'
-          fail_action: true
-          cmd_options: '-m 3 -a -l FAIL'
+          fail_action: false            # do not fail on any alert
+          cmd_options: '-m 3 -a -l INFO'
           allow_issue_writing: false
-          artifact_name: 'zap-baseline-report'
+
+      - name: Fail if High alerts found
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+          COUNT=$(jq '[.site[]?.alerts[]? | select((.riskcode|tonumber) >= 3)] | length' report_json.json)
+          echo "High-risk alerts: $COUNT"
+          test "$COUNT" -eq 0
+
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline
+          path: |
+            report_html.html
+            report_md.md
+            report_json.json
 
       - name: Stop app
         if: always()
