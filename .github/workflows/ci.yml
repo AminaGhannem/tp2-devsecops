@@ -1,0 +1,108 @@
+name: CI Security Pipeline
+
+on:
+  pull_request:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+  sca-npm-audit:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm ci --omit=dev
+
+      - name: npm audit (fail on high/critical)
+        run: |
+          npm audit --audit-level=high
+
+  sast-semgrep:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep (OWASP Top 10)
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/owasp-top-ten
+          generateSarif: "1"
+          sarifFile: semgrep.sarif
+          audit_on: push,pull_request
+        env:
+          SEMGREP_RULES: p/owasp-top-ten
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+
+  dast-zap:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start app
+        run: |
+          nohup npm start >/dev/null 2>&1 &
+          for i in {1..30}; do
+            if curl -sSf http://localhost:3000/ >/dev/null; then
+              echo "App is up"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: ZAP Baseline Scan (fail on HIGH)
+        uses: zaproxy/action-baseline@v0.13.0
+        with:
+          target: 'http://localhost:3000'
+          fail_action: true
+          cmd_options: '-m 3 -a'
+
+      - name: Stop app
+        if: always()
+        run: |
+          pkill -f "node dist/server.js" || true
