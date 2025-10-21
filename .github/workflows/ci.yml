@@ -128,6 +128,20 @@ jobs:
             -r report_html.html \
             -m 3 -a -l INFO
 
+      - name: ZAP Full Scan (active testing)
+        continue-on-error: true
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/zap/wrk/:rw \
+            --network=host \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-full-scan.py \
+            -t http://localhost:3000 \
+            -J report_json.json \
+            -w report_md.md \
+            -r report_html.html \
+            -m 3 -a -l INFO
+
       - name: Fail if High alerts found
         run: |
           if ! command -v jq >/dev/null 2>&1; then
