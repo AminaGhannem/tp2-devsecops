@@ -1,6 +1,4 @@
 import express from 'express';
-import fs from 'fs';
-import path from 'path';
 
 const app = express();
 
@@ -23,50 +21,16 @@ app.get('/', (req, res) => {
   res.send('Hello!');
 });
 
-// INTENTIONAL: Reflected XSS vulnerability for ZAP detection
-app.get('/search', (req, res) => {
-  const query = req.query.q || '';
+// Simple HTML page without CSP/XFO (DAST should flag missing headers)
+app.get('/insecure', (_req, res) => {
   res.setHeader('Content-Type', 'text/html');
-  // Directly embedding user input without sanitization - ZAP will catch this
-  res.send(`<!doctype html><html><head><title>Search</title></head><body><h1>Search Results</h1><p>You searched for: ${query}</p></body></html>`);
+  res.send('<!doctype html><html><head><title>Insecure</title></head><body><h1>Insecure Page</h1><p>No CSP or XFO set.</p></body></html>');
 });
 
-// INTENTIONAL: Directory traversal vulnerability for ZAP detection
-app.get('/file', (req, res) => {
-  const filename = String(req.query.name || 'index.html');
-  // No path validation - ZAP will catch directory traversal attempts
-  const filePath = path.join(__dirname, '..', filename);
-  
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    res.send(content);
-  } catch (error) {
-    res.status(404).send('File not found');
-  }
-});
-
-// INTENTIONAL: SQL injection simulation for ZAP detection
-app.get('/users', (req, res) => {
-  const id = req.query.id || '1';
-  // Simulate SQL injection vulnerability - ZAP will detect this pattern
-  const sqlQuery = `SELECT * FROM users WHERE id = ${id}`;
-  res.json({ 
-    message: 'User query executed', 
-    query: sqlQuery,
-    note: 'This is a simulated SQL injection vulnerability for DAST testing'
-  });
-});
-
-// INTENTIONAL: Command injection simulation
-app.get('/ping', (req, res) => {
-  const host = req.query.host || 'localhost';
-  // Simulate command injection - ZAP will detect this pattern
-  const command = `ping -c 1 ${host}`;
-  res.json({ 
-    message: 'Ping command executed', 
-    command: command,
-    note: 'This is a simulated command injection vulnerability for DAST testing'
-  });
+// Set an insecure cookie (no Secure/HttpOnly/SameSite) for DAST to flag
+app.get('/login', (_req, res) => {
+  res.setHeader('Set-Cookie', 'sessionid=demo; Path=/');
+  res.json({ message: 'Logged in (insecure cookie set)' });
 });
 
 export default app;
