@@ -1,4 +1,6 @@
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 
@@ -100,6 +102,63 @@ app.get('/bypass', (_req, res) => {
     user: 'admin',
     permissions: ['read', 'write', 'delete', 'admin'],
     token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+  });
+});
+
+// INTENTIONAL: HIGH RISK - Reflected XSS vulnerability
+app.get('/search', (req, res) => {
+  const query = req.query.q || '';
+  res.setHeader('Content-Type', 'text/html');
+  // Direct XSS - ZAP will definitely flag this as HIGH RISK
+  res.send(`<!doctype html><html><head><title>Search</title></head><body><h1>Search Results</h1><p>You searched for: ${query}</p></body></html>`);
+});
+
+// INTENTIONAL: HIGH RISK - SQL Injection simulation
+app.get('/users', (req, res) => {
+  const id = req.query.id || '1';
+  // Direct SQL injection - ZAP will flag this as HIGH RISK
+  const sqlQuery = `SELECT * FROM users WHERE id = ${id}`;
+  res.json({ 
+    message: 'User query executed', 
+    query: sqlQuery,
+    result: 'User found with ID: ' + id
+  });
+});
+
+// INTENTIONAL: HIGH RISK - Path Traversal with file access
+app.get('/file', (req, res) => {
+  const filename = String(req.query.name || 'package.json');
+  // No validation - ZAP will flag this as HIGH RISK
+  const filePath = path.join(__dirname, '..', filename);
+  
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(content);
+  } catch (error) {
+    res.status(404).send('File not found: ' + filename);
+  }
+});
+
+// INTENTIONAL: HIGH RISK - Server-Side Request Forgery (SSRF)
+app.get('/fetch', (req, res) => {
+  const url = String(req.query.url || 'http://localhost:3000');
+  // No URL validation - ZAP will flag this as HIGH RISK
+  res.json({
+    message: 'Fetching URL: ' + url,
+    note: 'This endpoint allows fetching any URL - SSRF vulnerability',
+    url: url
+  });
+});
+
+// INTENTIONAL: HIGH RISK - Command Injection
+app.get('/exec', (req, res) => {
+  const cmd = String(req.query.cmd || 'echo hello');
+  // Direct command injection - ZAP will flag this as HIGH RISK
+  res.json({
+    message: 'Command executed: ' + cmd,
+    note: 'This endpoint executes system commands - Command Injection vulnerability',
+    command: cmd
   });
 });
 
