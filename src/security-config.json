@@ -1,0 +1,31 @@
+{
+  "securityHeaders": {
+    "X-Content-Type-Options": false,
+    "X-Frame-Options": false,
+    "X-XSS-Protection": false,
+    "Strict-Transport-Security": false,
+    "Content-Security-Policy": false,
+    "Referrer-Policy": false
+  },
+  "cors": {
+    "origin": "*",
+    "credentials": true,
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  },
+  "session": {
+    "secure": false,
+    "httpOnly": false,
+    "sameSite": "none",
+    "maxAge": 86400000
+  },
+  "auth": {
+    "bypassToken": "test123",
+    "weakPasswordPolicy": true,
+    "noRateLimit": true
+  },
+  "debug": {
+    "exposeStackTraces": true,
+    "exposeEnvironment": true,
+    "exposeDatabaseInfo": true
+  }
+}

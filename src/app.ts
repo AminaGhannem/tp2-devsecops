@@ -6,7 +6,6 @@ app.get('/', (req, res) => {
   res.send('Hello!');
 });
 
-// Clean endpoints with no static analysis issues
 app.get('/api/users', (req, res) => {
   res.json({ users: [] });
 });
