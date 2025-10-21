@@ -14,16 +14,20 @@ const server = app.listen(port, '0.0.0.0', () => {
   console.log('API Keys: stripe=sk_live_1234567890, aws=AKIAIOSFODNN7EXAMPLE');
 });
 
-// INTENTIONAL: Missing security headers at server level
+// INTENTIONAL: Missing security headers at server level - DAST will detect this
 server.on('request', (req, res) => {
   // Remove security headers that Express might add
   res.removeHeader('X-Content-Type-Options');
   res.removeHeader('X-Frame-Options');
   res.removeHeader('X-XSS-Protection');
+  res.removeHeader('Strict-Transport-Security');
+  res.removeHeader('Content-Security-Policy');
   
-  // Set insecure headers
+  // Set insecure headers - DAST will flag these
   res.setHeader('Server', 'Express/5.1.0 (Ubuntu)');
   res.setHeader('X-Powered-By', 'Express');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 });
 
 // INTENTIONAL: Expose error details - DAST will flag this

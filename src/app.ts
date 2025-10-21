@@ -2,95 +2,55 @@ import express from 'express';
 
 const app = express();
 
-// INTENTIONAL: Enable JSON parsing without size limits for DAST testing
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
 app.get('/', (req, res) => {
   res.send('Hello!');
 });
 
-// INTENTIONAL: SQL Injection vulnerability - DAST will flag this
-app.get('/users/:id', (req, res) => {
-  const userId = req.params.id;
-  // Vulnerable SQL query construction - DAST scanners will detect this
-  const sqlQuery = `SELECT * FROM users WHERE id = ${userId}`;
-  
-  // Simulate database response
-  res.json({
-    message: 'User data retrieved',
-    query: sqlQuery,
-    user: {
-      id: userId,
-      name: 'John Doe',
-      email: 'john@example.com'
-    }
+// DAST-only vulnerability: Missing security headers (runtime behavior)
+app.get('/api/users', (req, res) => {
+  // Intentionally missing security headers - DAST will detect this
+  res.json({ users: [] });
+});
+
+// DAST-only vulnerability: HTTP method not allowed but accessible
+app.get('/api/admin', (req, res) => {
+  // Should require POST but allows GET - DAST will flag this
+  res.json({ message: 'Admin endpoint accessible via GET' });
+});
+
+// DAST-only vulnerability: Directory traversal via URL parameter
+app.get('/files', (req, res) => {
+  const filename = req.query.file;
+  // DAST will test for directory traversal attacks
+  res.send(`File content for: ${filename}`);
+});
+
+// DAST-only vulnerability: Missing CSRF protection
+app.post('/api/transfer', (req, res) => {
+  // No CSRF token validation - DAST will detect this
+  res.json({ message: 'Transfer completed' });
+});
+
+// DAST-only vulnerability: Session fixation
+app.get('/login', (req, res) => {
+  // No session regeneration - DAST will flag this
+  res.json({ message: 'Login page' });
+});
+
+// DAST-only vulnerability: Information disclosure via error messages
+app.get('/api/error', (req, res) => {
+  // DAST will test for error message information disclosure
+  res.status(500).json({ 
+    error: 'Database connection failed',
+    details: 'Connection to postgresql://admin:password@localhost:5432/db failed',
+    stack: 'Error: ECONNREFUSED at Database.connect()'
   });
 });
 
-// INTENTIONAL: Insecure Direct Object Reference (IDOR) vulnerability
-app.get('/admin/users/:userId', (req, res) => {
-  const userId = req.params.userId;
-  // No authorization check - DAST will flag this
-  res.json({
-    message: 'Admin access granted',
-    user: {
-      id: userId,
-      role: 'admin',
-      permissions: ['read', 'write', 'delete'],
-      sensitive_data: 'This should be protected'
-    }
-  });
-});
-
-// INTENTIONAL: XSS vulnerability - DAST will flag this
-app.get('/search', (req, res) => {
-  const query = req.query.q;
-  // Direct output without sanitization - DAST will detect XSS
-  res.send(`
-    <html>
-      <body>
-        <h1>Search Results</h1>
-        <p>You searched for: ${query}</p>
-        <p>No results found for "${query}"</p>
-      </body>
-    </html>
-  `);
-});
-
-// INTENTIONAL: Weak authentication mechanism
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  
-  // Weak password validation - DAST will flag this
-  if (username === 'admin' && password === 'admin') {
-    res.json({
-      success: true,
-      token: 'weak_token_12345',
-      message: 'Login successful'
-    });
-  } else {
-    res.status(401).json({
-      success: false,
-      message: 'Invalid credentials'
-    });
-  }
-});
-
-// INTENTIONAL: Information disclosure vulnerability
-app.get('/debug', (req, res) => {
-  res.json({
-    environment: process.env,
-    server_info: {
-      version: '1.0.0',
-      debug_mode: true,
-      database_url: 'postgresql://admin:password123@localhost:5432/prod_db',
-      api_keys: {
-        stripe: 'sk_live_1234567890',
-        aws: 'AKIAIOSFODNN7EXAMPLE'
-      }
-    }
-  });
+// DAST-only vulnerability: Weak session management
+app.get('/api/session', (req, res) => {
+  // No secure session flags - DAST will detect this
+  res.json({ sessionId: 'insecure_session_123' });
 });
 
 export default app;
