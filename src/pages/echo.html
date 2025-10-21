@@ -1,0 +1,9 @@
+<!-- DEMO: reflected XSS -->
+<!doctype html>
+<html><body>
+  <div id="out"></div>
+  <script>
+    const url = new URL(location.href);
+    document.getElementById('out').innerHTML = url.searchParams.get('q') || 'ok';
+  </script>
+</body></html>
