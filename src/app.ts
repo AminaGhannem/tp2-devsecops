@@ -139,4 +139,63 @@ app.get('/api/session', (_req, res) => {
   });
 });
 
+// INTENTIONAL: HIGH RISK - Reflected XSS (ZAP will definitely catch this)
+app.get('/search', (req, res) => {
+  const query = req.query.q || '';
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<html><body><h1>Search Results</h1><p>You searched for: ${query}</p></body></html>`);
+});
+
+// INTENTIONAL: HIGH RISK - SQL Injection (ZAP will definitely catch this)
+app.get('/users', (req, res) => {
+  const id = req.query.id || '1';
+  const sqlQuery = `SELECT * FROM users WHERE id = ${id}`;
+  res.json({ 
+    message: 'User query executed', 
+    query: sqlQuery,
+    result: 'User found with ID: ' + id
+  });
+});
+
+// INTENTIONAL: HIGH RISK - Directory Traversal (ZAP will definitely catch this)
+app.get('/file', (req, res) => {
+  const filename = String(req.query.name || 'package.json');
+  const filePath = path.join(__dirname, '..', filename);
+  
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(content);
+  } catch (error) {
+    res.status(404).send('File not found: ' + filename);
+  }
+});
+
+// INTENTIONAL: HIGH RISK - Authentication Bypass (ZAP will definitely catch this)
+app.get('/admin', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`
+    <html>
+      <body>
+        <h1>Admin Panel</h1>
+        <p>Welcome to the admin panel!</p>
+        <p>You have full administrative access.</p>
+        <a href="/admin/users">View Users</a> | 
+        <a href="/admin/settings">Settings</a>
+      </body>
+    </html>
+  `);
+});
+
+// INTENTIONAL: HIGH RISK - Sensitive Data Exposure (ZAP will definitely catch this)
+app.get('/admin/users', (_req, res) => {
+  res.json({
+    users: [
+      { id: 1, username: 'admin', password: 'admin123', email: 'admin@company.com' },
+      { id: 2, username: 'user1', password: 'password123', email: 'user1@company.com' },
+      { id: 3, username: 'user2', password: 'qwerty', email: 'user2@company.com' }
+    ]
+  });
+});
+
 export default app;
