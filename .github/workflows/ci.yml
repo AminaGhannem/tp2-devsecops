@@ -136,7 +136,7 @@ jobs:
             --network=host \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-full-scan.py \
-            -t http://localhost:3000 \
+            -t http://localhost:3000/vuln \
             -J report_json.json \
             -w report_md.md \
             -r report_html.html \
