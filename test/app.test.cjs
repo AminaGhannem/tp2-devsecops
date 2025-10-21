@@ -4,8 +4,8 @@ const request = require('supertest');
 
 const app = require('../dist/app.js').default;
 
-test('GET / returns Hello World!', async () => {
+test('GET / returns Hello!', async () => {
   const res = await request(app).get('/');
   assert.equal(res.statusCode, 200);
-  assert.equal(res.text, '<h1>Hello World!</h1>');
+  assert.equal(res.text, 'Hello!');
 });
