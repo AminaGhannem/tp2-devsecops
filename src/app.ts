@@ -7,27 +7,33 @@ app.get('/', (req, res) => {
   res.send('Hello!');
 });
 
-// deliberately vulnerable endpoint — reflected XSS at runtime
 app.get('/vuln', (req, res) => {
   const q = String(req.query.q ?? 'World');
 
-  // reflect user input unsanitized into HTML (will be detected by ZAP)
   const html = `
     <!doctype html>
     <html>
-      <head><meta charset="utf-8"><title>Vuln</title></head>
+      <head><meta charset="utf-8"><title>Vuln (fixed)</title></head>
       <body>
-        <h1>Test reflected XSS</h1>
+        <h1>Test reflected XSS (fixed)</h1>
         <form action="/vuln" method="get">
-          <input name="q" value="${q}" />
+          <input id="qinput" name="q" value="" />
           <button type="submit">Search</button>
         </form>
-        <div id="result">You searched for: ${q}</div>
+        <div id="result">You searched for: <span id="resultText"></span></div>
+
+        <script>
+          // safe: set values via textContent/value assignment (no innerHTML)
+          const params = new URLSearchParams(location.search);
+          const q = params.get('q') || 'World';
+          document.getElementById('qinput').value = q;
+          document.getElementById('resultText').textContent = q;
+        </script>
       </body>
     </html>
   `;
-
   res.send(html);
 });
+
 
 export default app;
